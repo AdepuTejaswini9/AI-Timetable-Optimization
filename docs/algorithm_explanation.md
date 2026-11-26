@@ -1,0 +1,10 @@
+# Algorithms
+**Chromosome**: integer array (n_sessions × 3) = [day, period, room]; each session row fixes section, subject, faculty, duration (labs = consecutive blocks), so all required weekly hours are scheduled by construction and re-verified for DB-loaded timetables.
+**Hard constraints** (`Problem.analyze`): faculty/room/section clashes, capacity, room type (lab vs classroom), faculty/room availability, valid block (no lab across lunch/end of day), daily/weekly faculty hours, valid assignments, required hours. Violation count is the pymoo constraint `G` (feasible only if 0), so hard constraints are never traded off.
+**Soft objectives** (minimised): student free periods, faculty "avoid" slot use, excess consecutive teaching (>3), room under-utilisation (wasted capacity), same-subject-same-day duplication.
+**Operators**: randomised constructive initialisation with occupancy tables; (section,subject)-level uniform crossover + repair; move / swap / room-change mutation that only makes feasible moves.
+**GA baseline**: tournament selection, elitism, weighted-sum fitness (hard×1000 + Σw·f).
+**NSGA-II**: pymoo, 5 separate objectives, non-dominated sorting + crowding distance, constraint domination.
+**Local search**: hill climbing; accepts only feasible neighbours that Pareto-dominate the current objective vector; applied to the NSGA-II front, result re-filtered to non-dominated.
+**Incremental re-optimisation**: apply event → affected = sessions that now violate hard constraints → lock the rest → randomised greedy re-placement (best local soft cost) → if stuck, unlock dependent sessions (same section → +same faculty → all) → validate whole timetable → save as new version; on failure original is kept and reasons/alternatives returned.
+**Explainability**: `explain.describe` yields type/faculty/subject/section/room/slot/explanation/suggestion. `proof_of_infeasibility` uses sound necessary conditions (no suitable room, no faculty slot, overloaded faculty/section/rooms); if none holds and search fails the outcome is `search_limit_reached` (explicitly *not* a proof).
